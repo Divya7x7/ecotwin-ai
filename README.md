@@ -40,6 +40,7 @@ with your local waste service.
 2. The photo is sent to a Supabase function called `analyze-waste`.
 3. The function asks the Groq AI what the item is.
 4. The answer comes back and the website shows it.
+5. After a scan, you can ask follow-up questions about the item in the chat box with eco-chat.
 
 Your AI key is kept safe in Supabase and is never in the website code.
 
