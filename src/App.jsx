@@ -34,6 +34,7 @@ function App() {
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -62,6 +63,10 @@ function App() {
 
   function openPicker() {
     fileInputRef.current?.click();
+  }
+
+  function openCamera() {
+    cameraInputRef.current?.click();
   }
 
   function handleImage(event) {
@@ -223,7 +228,7 @@ function App() {
     setError("");
     setScanning(false);
     resetChat();
-    openPicker();
+    openCamera();
   }
 
   return (
@@ -254,16 +259,31 @@ function App() {
             how to reuse it, and how to make a difference.
           </p>
 
-          <button className="primary-button" onClick={openPicker}>
-            <span>◎</span> Scan Your Waste
-          </button>
+          <div className="hero-buttons">
+            <button className="primary-button" onClick={openCamera}>
+              <span>◎</span> Take Photo
+            </button>
 
-          {/* No `capture` attribute: on phones the browser then offers both
-              "Take photo" and "Choose from library". */}
+            <button className="secondary-button" onClick={openPicker}>
+              Upload Image
+            </button>
+          </div>
+
+          {/* Camera input: capture opens the phone camera directly. */}
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            hidden
+            onChange={handleImage}
+          />
+
+          {/* Upload input: no capture, so it opens the photo library. */}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/jpeg,image/png,image/webp"
+            accept="image/*"
             hidden
             onChange={handleImage}
           />

@@ -558,3 +558,15 @@ footer p {
     max-width: 92%;
   }
 }
+
+/* ---- Camera / upload buttons ---- */
+.hero-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.hero-buttons .secondary-button {
+  padding: 15px 24px;
+}
