@@ -8,7 +8,7 @@ Take a photo of an item and the AI tells you:
 - how to throw it away properly
 - ways to reuse it
 
-**Live website:** https://YOUR-APP.vercel.app
+**Live website:** https://ecotwin-9h8ky3vc6-dexter-cbcf.vercel.app/
 
 ---
 
