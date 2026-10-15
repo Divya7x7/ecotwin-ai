@@ -3,6 +3,13 @@ import "./App.css";
 import { supabase } from "./supabase";
 
 const FUNCTION_NAME = "analyze-waste";
+const CHAT_FUNCTION_NAME = "eco-chat";
+
+const SUGGESTED_QUESTIONS = [
+  "Can I recycle the cap or lid too?",
+  "How do I clean it before recycling?",
+  "I have lots of these. What can I make?",
+];
 
 // supabase-js hides the real error body on non-2xx responses; read it so the
 // user sees the backend's actual message (rate limit, image too large, etc.).
@@ -27,6 +34,24 @@ function App() {
   const [analysis, setAnalysis] = useState(null);
   const [error, setError] = useState("");
   const fileInputRef = useRef(null);
+
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState("");
+  const chatEndRef = useRef(null);
+
+  // Keep the newest chat message in view.
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [chatMessages, chatLoading]);
+
+  function resetChat() {
+    setChatMessages([]);
+    setChatInput("");
+    setChatError("");
+    setChatLoading(false);
+  }
 
   // Free the preview URL when it changes or the component unmounts.
   useEffect(() => {
@@ -54,6 +79,7 @@ function App() {
       setAnalysis(null);
       setError("");
       setScanning(false);
+      resetChat();
       setActiveTab("Scan");
     }
 
@@ -122,6 +148,7 @@ function App() {
     setScanning(true);
     setError("");
     setAnalysis(null);
+    resetChat();
 
     try {
       const imageDataUrl = await resizeImage(selectedFile);
@@ -147,12 +174,55 @@ function App() {
     }
   }
 
+  async function sendChat(text) {
+    const question = (text ?? chatInput).trim();
+    if (!question || chatLoading || !analysis) return;
+
+    const nextMessages = [...chatMessages, { role: "user", content: question }];
+    setChatMessages(nextMessages);
+    setChatInput("");
+    setChatError("");
+    setChatLoading(true);
+
+    try {
+      const { data, error: functionError } = await supabase.functions.invoke(
+        CHAT_FUNCTION_NAME,
+        { body: { analysis, messages: nextMessages } }
+      );
+
+      if (functionError) {
+        throw new Error(await readFunctionError(functionError));
+      }
+
+      if (!data?.success || !data?.reply) {
+        throw new Error(data?.error || "The assistant could not answer.");
+      }
+
+      setChatMessages([
+        ...nextMessages,
+        { role: "assistant", content: data.reply },
+      ]);
+    } catch (err) {
+      setChatError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  function handleChatKeyDown(event) {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      sendChat();
+    }
+  }
+
   function retakePhoto() {
     setSelectedImage(null);
     setSelectedFile(null);
     setAnalysis(null);
     setError("");
     setScanning(false);
+    resetChat();
     openPicker();
   }
 
@@ -294,6 +364,74 @@ function App() {
               {analysis.caution && (
                 <p><strong>Note:</strong> {analysis.caution}</p>
               )}
+            </div>
+          )}
+
+          {analysis && (
+            <div className="chat-panel">
+              <h3>Ask EcoTwin about this {analysis.item}</h3>
+
+              {chatMessages.length === 0 && (
+                <div className="chat-suggestions">
+                  {SUGGESTED_QUESTIONS.map((question) => (
+                    <button
+                      key={question}
+                      className="chip"
+                      onClick={() => sendChat(question)}
+                      disabled={chatLoading}
+                    >
+                      {question}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {chatMessages.length > 0 && (
+                <div className="chat-messages" aria-live="polite">
+                  {chatMessages.map((message, index) => (
+                    <div
+                      key={index}
+                      className={`chat-bubble ${
+                        message.role === "user" ? "chat-user" : "chat-bot"
+                      }`}
+                    >
+                      {message.content}
+                    </div>
+                  ))}
+
+                  {chatLoading && (
+                    <div className="chat-bubble chat-bot chat-typing">
+                      Thinking...
+                    </div>
+                  )}
+
+                  <div ref={chatEndRef} />
+                </div>
+              )}
+
+              {chatError && (
+                <p className="chat-error" role="alert">{chatError}</p>
+              )}
+
+              <div className="chat-input-row">
+                <textarea
+                  className="chat-input"
+                  rows={1}
+                  maxLength={500}
+                  placeholder="Ask a follow-up question..."
+                  value={chatInput}
+                  onChange={(event) => setChatInput(event.target.value)}
+                  onKeyDown={handleChatKeyDown}
+                  disabled={chatLoading}
+                />
+                <button
+                  className="primary-button chat-send"
+                  onClick={() => sendChat()}
+                  disabled={chatLoading || !chatInput.trim()}
+                >
+                  Send
+                </button>
+              </div>
             </div>
           )}
 
